@@ -347,9 +347,25 @@
         let hydrationLogs = {}; 
         
         // --- Gemini API Integrations ---
+        // --- Gemini API Integrations ---
         async function callGeminiAPI(prompt, config = {}) {
-            const apiKey = "AIzaSyBLLrBltJKofY_0LoXQY9Dy8jQGpyZZd2E"; // API Key is managed by the environment
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+            // 1. Try to get the key from Local Storage
+            let apiKey = localStorage.getItem("gemini_api_key");
+
+            // 2. If no key is found, ask the user for it
+            if (!apiKey) {
+                apiKey = prompt("Please enter your Google Gemini API Key:");
+                if (apiKey) {
+                    // 3. Save it so they don't have to type it again
+                    localStorage.setItem("gemini_api_key", apiKey);
+                } else {
+                    alert("API Key is required for AI features.");
+                    throw new Error("User cancelled API key prompt.");
+                }
+            }
+
+            // Standard API setup
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
             const payload = {
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -365,6 +381,13 @@
 
                 if (!response.ok) {
                     const errorBody = await response.text();
+                    
+                    // If Permission Denied (403) or Bad Request (400), the key might be wrong.
+                    if (response.status === 400 || response.status === 403) {
+                         localStorage.removeItem("gemini_api_key");
+                         alert("Invalid API Key or Permissions. Please reload and try a valid key.");
+                    }
+                    
                     console.error("API Error Response:", errorBody);
                     throw new Error(`API request failed with status ${response.status}`);
                 }
@@ -381,6 +404,9 @@
                 throw error;
             }
         }
+
+        // --- Local Storage Operations ---
+        // (Keep the rest of your code below this line exactly as it was)
         
         // --- Local Storage Operations ---
         const loadData = () => {
